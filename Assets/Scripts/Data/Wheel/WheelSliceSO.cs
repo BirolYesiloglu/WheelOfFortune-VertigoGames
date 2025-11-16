@@ -1,38 +1,42 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "WheelSlice", menuName = "Vertigo/Wheel Slice")]
-public class WheelSliceSO : ScriptableObject
+namespace VertigoGames.Wheel.Data
 {
-    [SerializeField] private string _sliceName;
-    public string SliceName => _sliceName;
+    [CreateAssetMenu(fileName = "WheelSlice", menuName = "Vertigo/Wheel Slice")]
 
-    [Header("Visual")]
-    [SerializeField] private Sprite _icon;
-    public Sprite Icon => _icon;
+    public class WheelSliceSO : ScriptableObject
+    {
+        [SerializeField] private string _sliceName;
+        public string SliceName => _sliceName;
 
-    [Header("Reward Settings")]
-    [SerializeField] private RewardType _rewardType;
-    public RewardType RewardType => _rewardType;
+        [Header("Visual")]
+        [SerializeField] private Sprite _icon;
+        public Sprite Icon => _icon;
 
-    [SerializeField] private int _rewardValue;
-    public int RewardValue => _rewardValue;
+        [Header("Reward Settings")]
+        [SerializeField] private RewardType _rewardType;
+        public RewardType RewardType => _rewardType;
 
-    [Header("Flags")]
-    [SerializeField] private bool _isBomb;
-    public bool IsBomb => _isBomb;
+        [SerializeField] private int _rewardValue;
+        public int RewardValue => _rewardValue;
 
-    [SerializeField] private bool _isSpecial;
-    public bool IsSpecial => _isSpecial;
+        [Header("Flags")]
+        [SerializeField] private bool _isBomb;
+        public bool IsBomb => _isBomb;
 
-    [TextArea, SerializeField] private string _description;
-    public string Description => _description;
-}
+        [SerializeField] private bool _isSpecial;
+        public bool IsSpecial => _isSpecial;
 
-public enum RewardType
-{
-    None,
-    Points,
-    Chest,
-    Item,
-    Currency
+        [TextArea, SerializeField] private string _description;
+        public string Description => _description;
+    }
+
+    public enum RewardType
+    {
+        None,
+        Points,
+        Chest,
+        Item,
+        Currency
+    }
 }
