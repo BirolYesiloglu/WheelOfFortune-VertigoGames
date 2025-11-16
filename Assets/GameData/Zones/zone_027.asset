@@ -12,8 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: faf680ed04d847c4daef02d8c72448ca, type: 3}
   m_Name: zone_027
   m_EditorClassIdentifier: 
-  zoneIndex: 27
-  isSafeZone: 0
-  isSuperZone: 0
-  slices: []
-  notes: 
+  _zoneIndex: 27
+  _isSafeZone: 0
+  _isSuperZone: 0
+  _slices: []
+  _notes: "Standard zone. Randomized slice set using the main slice pool. Difficulty
+    and reward values remain balanced. Includes 1 bomb slice.\r"

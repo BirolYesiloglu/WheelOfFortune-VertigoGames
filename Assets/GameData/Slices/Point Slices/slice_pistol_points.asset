@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d0487ca7df955042abfa1e25978f8dd, type: 3}
   m_Name: slice_pistol_points
   m_EditorClassIdentifier: 
-  icon: {fileID: 21300000, guid: 7ea3c9e72b7436142957da722b1e7ffd, type: 3}
-  rewardType: 1
-  rewardValue: 10
-  isBomb: 0
-  isSpecial: 0
-  description: Basic pistol bonus. Low-tier upgrade.
+  _sliceName: Pistol Points
+  _icon: {fileID: 21300000, guid: 7ea3c9e72b7436142957da722b1e7ffd, type: 3}
+  _rewardType: 1
+  _rewardValue: 10
+  _isBomb: 0
+  _isSpecial: 0
+  _description: Basic low-tier pistol improvement.

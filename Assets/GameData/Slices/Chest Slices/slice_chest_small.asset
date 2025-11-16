@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d0487ca7df955042abfa1e25978f8dd, type: 3}
   m_Name: slice_chest_small
   m_EditorClassIdentifier: 
-  icon: {fileID: 0}
-  rewardType: 2
-  rewardValue: 1
-  isBomb: 0
-  isSpecial: 0
-  description: Small loot chest. Low payout tier.
+  _sliceName: Small Chest
+  _icon: {fileID: 21300000, guid: 8454682d9e42ac444b816757a2fd7b41, type: 3}
+  _rewardType: 2
+  _rewardValue: 1
+  _isBomb: 0
+  _isSpecial: 0
+  _description: Entry-level chest. Low payout.

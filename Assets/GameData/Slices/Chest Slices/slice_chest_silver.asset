@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d0487ca7df955042abfa1e25978f8dd, type: 3}
   m_Name: slice_chest_silver
   m_EditorClassIdentifier: 
-  icon: {fileID: 0}
-  rewardType: 2
-  rewardValue: 2
-  isBomb: 0
-  isSpecial: 0
-  description: Mid-tier loot chest. Standard rewards.
+  _sliceName: Silver Chest
+  _icon: {fileID: 21300000, guid: 48588bd71f1e19a40b083f33af4fba9e, type: 3}
+  _rewardType: 2
+  _rewardValue: 2
+  _isBomb: 0
+  _isSpecial: 0
+  _description: Mid-tier chest reward.

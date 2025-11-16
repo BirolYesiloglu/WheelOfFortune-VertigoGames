@@ -10,10 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: faf680ed04d847c4daef02d8c72448ca, type: 3}
-  m_Name: zone_025_safe
+  m_Name: zone_030
   m_EditorClassIdentifier: 
-  zoneIndex: 25
-  isSafeZone: 1
-  isSuperZone: 0
-  slices: []
-  notes: 
+  _zoneIndex: 30
+  _isSafeZone: 0
+  _isSuperZone: 1
+  _slices: []
+  _notes: "Super Zone. Highest-tier loot table. No bomb or low-tier slices. \r\nIncreased
+    gold, big, and super chest frequency. \r\nActs as a milestone reward for reaching
+    the end of the progression cycle.\r"

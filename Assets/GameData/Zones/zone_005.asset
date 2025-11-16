@@ -10,11 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: faf680ed04d847c4daef02d8c72448ca, type: 3}
-  m_Name: zone_029
+  m_Name: zone_005
   m_EditorClassIdentifier: 
-  _zoneIndex: 29
-  _isSafeZone: 0
+  _zoneIndex: 5
+  _isSafeZone: 1
   _isSuperZone: 0
   _slices: []
-  _notes: "Standard zone. Randomized slice set using the main slice pool. Difficulty
-    and reward values remain balanced. Includes 1 bomb slice.\r"
+  _notes: "Safe Zone. Bomb slice is removed to avoid player frustration in early
+    progression. \r\nReward balance slightly improved: increased chest chance and
+    improved point slice distribution. \r\nDesigned to provide a sense of progression
+    and prevent repetitive low-tier spins.\r"
