@@ -15,7 +15,7 @@ MonoBehaviour:
   _sliceName: Super Chest
   _icon: {fileID: 21300000, guid: 68c4f77b9be146b4c82c74cc22d5909e, type: 3}
   _rewardType: 2
-  _rewardValue: 0
+  _rewardValue: 5
   _isBomb: 0
   _isSpecial: 1
   _description: Super Zone exclusive chest. Highest-tier loot.
