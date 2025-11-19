@@ -229,12 +229,11 @@ namespace VertigoGames.Wheel.Systems
 
                             _rewardManager.ResetRewards();
                             _vfx.ResetRewardStack();
-
                             _continueSystem.ResetContinueCycle();
 
-                            _currentZoneIndex = 0;
                             ResumeZoneLoad();
-                            LoadZone(0);
+
+                            GoToZone1();
                         }
                     );
 
