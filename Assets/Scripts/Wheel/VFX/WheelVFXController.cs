@@ -45,6 +45,7 @@ namespace VertigoGames.Wheel.VFX
                 _starGlowAlpha = GameObject.Find("ui_star_glow_alpha")?.GetComponent<Image>();
         }
 #endif
+
         public void PlayWheelGlowIdle()
         {
             if (_starGlowAlpha == null)
@@ -207,7 +208,11 @@ namespace VertigoGames.Wheel.VFX
             rt.localScale = Vector3.zero;
 
             // Target
-            Vector3 targetPos = _rewardStackRoot.TransformPoint(Vector3.zero);
+            int nextIndex = _rewardStackRoot.childCount;
+            float totalItemSize = _iconWidth + _iconSpacing;
+            float nextLocalX = nextIndex * totalItemSize + (totalItemSize * 0.5f);
+            Vector3 targetLocalPos = new Vector3(nextLocalX, 0, 0);
+            Vector3 targetPos = _rewardStackRoot.TransformPoint(targetLocalPos);
 
             // Animation
             Sequence seq = DOTween.Sequence();
@@ -219,30 +224,17 @@ namespace VertigoGames.Wheel.VFX
             {
                 rt.SetParent(_rewardStackRoot, false);
 
-                RectTransform stackRT = _rewardStackRoot;
-
-                LayoutElement layout = rt.GetComponent<LayoutElement>();
-                float w = layout != null ? layout.preferredWidth : _iconWidth;
-                float total = w + _iconSpacing;
-
-                int idx = stackRT.childCount - 1;
-
-                // Child pivot 0.5, root pivot 0.5 → centered
-                float xPos = idx * total + (total * 0.5f);
-
                 rt.anchorMin = new Vector2(0, 0.5f);
                 rt.anchorMax = new Vector2(0, 0.5f);
                 rt.pivot = new Vector2(0.5f, 0.5f);
 
-                rt.anchoredPosition = new Vector2(xPos, 0);
+                rt.anchoredPosition = new Vector2(nextLocalX, 0);
 
-                // Expand content width
-                stackRT.sizeDelta = new Vector2(
-                    (idx + 1) * total,
-                    stackRT.sizeDelta.y
+                _rewardStackRoot.sizeDelta = new Vector2(
+                    (nextIndex + 1) * totalItemSize,
+                    _rewardStackRoot.sizeDelta.y
                 );
 
-                // Auto-scroll to the right
                 DOVirtual.DelayedCall(0.05f, () =>
                 {
                     _rewardScrollRect.horizontalNormalizedPosition = 1f;
