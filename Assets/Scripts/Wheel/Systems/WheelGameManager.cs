@@ -6,22 +6,11 @@ using VertigoGames.Wheel.VFX;
 
 namespace VertigoGames.Wheel.Systems
 {
-    /// <summary>
-    /// Controls the entire wheel progression loop:
-    /// - Tracks current zone
-    /// - Applies themes
-    /// - Handles bomb / safe logic
-    /// - Subscribes to wheel spin results
-    /// </summary>
     public class WheelGameManager : MonoBehaviour
     {
-        /// <summary>
-        /// Global access point. Lives across scenes.
-        /// </summary>
         public static WheelGameManager Instance { get; private set; }
 
         [Header("Zone Settings")]
-        [Tooltip("All wheel zones (from Zone 1 to Zone 30). Must match the progression order.")]
         [SerializeField] private WheelZoneSO[] _zones;
 
         [Header("Themes")]
@@ -31,28 +20,25 @@ namespace VertigoGames.Wheel.Systems
 
         [Header("References")]
         [SerializeField] private WheelController _wheelController;
-
         [SerializeField] private WheelIconLayout _iconLayout;
+        [SerializeField] private ContinueSystem _continueSystem;
+        [SerializeField] private ContinueUIController _continueUI;
+        [SerializeField] private RewardManager _rewardManager;
+        [SerializeField] private WheelVFXController _vfx;
+
         public WheelIconLayout IconLayout => _iconLayout;
-        public WheelController Wheel => _wheelController;
+        public RewardManager Rewards => _rewardManager;
 
         private bool _isPaused = false;
-
         public void PauseZoneLoad() => _isPaused = true;
         public void ResumeZoneLoad() => _isPaused = false;
 
-
-        /// <summary>
-        /// Current active zone index.
-        /// </summary>
         private int _currentZoneIndex = 0;
 
-        // =======================================================================
-        //  LIFECYCLE
-        // =======================================================================
+        public event System.Action OnZoneLoaded;
+
         private void Awake()
         {
-            // Basic Singleton
             if (Instance != null && Instance != this)
             {
                 Destroy(gameObject);
@@ -67,7 +53,7 @@ namespace VertigoGames.Wheel.Systems
         {
             if (_wheelController == null)
             {
-                Debug.LogError("WheelGameManager: WheelController reference is missing!");
+                Debug.LogError("WheelGameManager: Missing WheelController reference!");
                 return;
             }
 
@@ -77,56 +63,58 @@ namespace VertigoGames.Wheel.Systems
                 return;
             }
 
-            // FIRST ZONE LOAD
-            LoadZone(_currentZoneIndex);
+            _vfx.PlayWheelGlowIdle();
 
-            // Subscribe to wheel spin results
+            LoadZone(_currentZoneIndex);
             _wheelController.SubscribeToSpinResult(HandleSliceResult);
         }
 
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (_wheelController == null)
+                _wheelController = FindObjectOfType<WheelController>();
+
+            if (_iconLayout == null)
+                _iconLayout = FindObjectOfType<WheelIconLayout>();
+
+            if (_rewardManager == null)
+                _rewardManager = FindObjectOfType<RewardManager>();
+
+            if (_vfx == null)
+                _vfx = FindObjectOfType<WheelVFXController>();
+
+            if (_continueSystem == null)
+                _continueSystem = FindObjectOfType<ContinueSystem>();
+
+            if (_continueUI == null)
+                _continueUI = FindObjectOfType<ContinueUIController>();
+        }
+#endif
+
         private void OnDestroy()
         {
-            // Unsubscribe when destroyed
             if (Instance == this && _wheelController != null)
             {
                 _wheelController.UnsubscribeFromSpinResult(HandleSliceResult);
             }
         }
 
-        // =======================================================================
-        //  PUBLIC HELPERS
-        // =======================================================================
+        public WheelZoneSO CurrentZone => _zones[_currentZoneIndex];
 
-        /// <summary>
-        /// Returns the index of a slice inside the current zone.
-        /// Used by VFXController to know which slot to highlight.
-        /// </summary>
         public int GetSliceIndex(WheelSliceSO slice)
         {
-            WheelZoneSO currentZone = _zones[_currentZoneIndex];
+            var zone = CurrentZone;
 
-            for (int i = 0; i < currentZone.Slices.Count; i++)
+            for (int i = 0; i < zone.Slices.Count; i++)
             {
-                if (currentZone.Slices[i] == slice)
+                if (zone.Slices[i] == slice)
                     return i;
             }
 
             return -1;
         }
 
-
-        /// <summary>
-        /// Public getter for currently active zone.
-        /// </summary>
-        public WheelZoneSO CurrentZone => _zones[_currentZoneIndex];
-
-        // =======================================================================
-        //  ZONE / THEME HANDLING
-        // =======================================================================
-
-        /// <summary>
-        /// Loads the zone data + theme for the given index.
-        /// </summary>
         private void LoadZone(int index)
         {
             if (index < 0 || index >= _zones.Length)
@@ -134,21 +122,29 @@ namespace VertigoGames.Wheel.Systems
 
             WheelZoneSO zone = _zones[index];
 
-            // 1) Set zone (shuffle + animations inside)
+            // Set zone data
             _wheelController.SetZone(zone);
 
-            // 2) Apply theme (bronze/silver/gold)
+            // Calculate theme once
             WheelThemeSO theme = GetThemeForZone(index);
+
             _wheelController.ApplyTheme(theme);
 
+
+            // Zone VFX
+            if (theme == _goldTheme)
+                _vfx.PlayGoldTransition();
+            else if (theme == _silverTheme)
+                _vfx.PlaySilverTransition();
+
+            // Reset wheel rotation visually
             _wheelController.ResetWheelRotation(0.25f);
 
             Debug.Log($"ZONE LOADED → {index + 1}/{_zones.Length}");
+
+            OnZoneLoaded?.Invoke();
         }
 
-        /// <summary>
-        /// Determines which theme should be used based on the zone number.
-        /// </summary>
         private WheelThemeSO GetThemeForZone(int index)
         {
             int zoneNumber = index + 1;
@@ -162,52 +158,100 @@ namespace VertigoGames.Wheel.Systems
             return _bronzeTheme;
         }
 
-        // =======================================================================
-        //  GAME LOOP LOGIC
-        // =======================================================================
+        public void GoToZone1()
+        {
+            _currentZoneIndex = 0;
+            LoadZone(0);
+        }
 
-        /// <summary>
-        /// Called every time the wheel finishes spinning.
-        /// Handles bomb logic, safe zones and zone progression.
-        /// </summary>
         private void HandleSliceResult(WheelSliceSO slice)
         {
-            WheelZoneSO currentZone = _zones[_currentZoneIndex];
-
             if (_isPaused) return;
 
-            // ---------------------------------------------------------
-            // BOMB LOGIC
-            // ---------------------------------------------------------
+            WheelZoneSO currentZone = CurrentZone;
+
+            // -----------------------------
+            // BOMB CASE
+            // -----------------------------
             if (slice.IsBomb)
             {
                 if (currentZone.IsSafeZone)
                 {
-                    Debug.Log("SAFE ZONE → Bomb ignored!");
+                    Debug.Log("SAFE ZONE → Bomb ignored");
                 }
                 else
                 {
-                    Debug.Log("BOMB → Reset to Zone 1");
+                    Debug.Log("BOMB → Continue screen");
 
-                    // ⭐ VFX stack reset
-                    FindObjectOfType<WheelVFXController>().ResetRewardStack();
+                    PauseZoneLoad();
 
-                    _currentZoneIndex = 0;
-                    LoadZone(_currentZoneIndex);
+                    _continueUI.Show(
+                        _continueSystem.CurrentPrice,
+
+                        // YES (Continue)
+                        () =>
+                        {
+                            Debug.Log("CONTINUE accepted");
+
+                            int price = _continueSystem.CurrentPrice;
+
+                            if (!_rewardManager.TrySpendScore(price))
+                            {
+                                Debug.Log("NOT ENOUGH SCORE → Continue cannot be used!");
+                                return;
+                            }
+                            _continueSystem.IncrementContinueCount();
+
+                            // 3) REFRESH current wheel (shuffle + rotation reset)
+                            // Shuffle active zone
+                            CurrentZone.ShuffleSlices();
+
+                            // Reset wheel rotation
+                            _wheelController.ResetWheelRotation(0f);
+
+                            // Reapply wheel theme (optional)
+                            _wheelController.ApplyTheme(GetThemeForZone(_currentZoneIndex));
+
+                            // Reapply zone data to wheel using layout (UI icon update)
+                            _wheelController.SetZone(CurrentZone);
+
+                            // 4) Resume game
+                            ResumeZoneLoad();
+                        },
+
+                        // NO (Exit – full reset)
+                        () =>
+                        {
+                            Debug.Log("CONTINUE declined → Full reset");
+
+                            _rewardManager.ResetRewards();
+                            _vfx.ResetRewardStack();
+
+                            _continueSystem.ResetContinueCycle();
+
+                            _currentZoneIndex = 0;
+                            ResumeZoneLoad();
+                            LoadZone(0);
+                        }
+                    );
+
                     return;
                 }
             }
             else
             {
-                // ---------------------------------------------------------
-                // NORMAL PROGRESSION
-                // ---------------------------------------------------------
+                _rewardManager.AddReward(slice);
+                _vfx.PlayRewardEffect(slice);
+
+                // Progress zone index
                 _currentZoneIndex++;
 
                 if (_currentZoneIndex >= _zones.Length)
-                    _currentZoneIndex = _zones.Length - 1;
+                {
+                    // Loop back to Zone 1
+                    _currentZoneIndex = 0;
+                }
             }
-
             LoadZone(_currentZoneIndex);
         }
     }
