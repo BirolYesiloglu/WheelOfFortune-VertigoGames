@@ -44,14 +44,13 @@ namespace VertigoGames.Wheel.UI
         private const int SliceCount = 8;
         private float _lastSliceIndex = -1f;
         private float _sliceAngleSize = 360f / SliceCount;
-        private Vector3 _pointerDefaultRotation;
+        private Vector3 _pointerDefaultRotation = new Vector3(0,0,270);
 
         // --------------------------------------------------------------------
 
         private void Start()
         {
-            if (!ValidateRefs())
-                return;
+            if (!ValidateRefs()) return;
 
             if (_autoFill == null)
             {
@@ -67,6 +66,15 @@ namespace VertigoGames.Wheel.UI
             _spinButton.onClick.RemoveAllListeners();
             _spinButton.onClick.AddListener(Spin);
 
+            if (_exitButton != null)
+            {
+                _exitButton.onClick.RemoveAllListeners();
+                _exitButton.onClick.AddListener(() =>
+                {
+                    Application.Quit();
+                });
+            }
+
             // Auto fill slice data at runtime
             _autoFill.FillZone(_currentZone);
             ApplyZoneData();
@@ -75,48 +83,24 @@ namespace VertigoGames.Wheel.UI
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            if (_spinButton == null)
-                _spinButton = GetComponentInChildren<Button>(true);
-
-            if (_wheelRoot == null)
-                _wheelRoot = GetComponentInChildren<RectTransform>(true);
-
-            if (_pointer == null)
-                _pointer = GetComponentInChildren<Image>(true);
-
-            if (_autoFill == null)
-                _autoFill = GetComponent<WheelZoneAutoFill>();
-
-            if (_exitButton == null)
-                _exitButton = GameObject.Find("ui_button_exit")?.GetComponent<Button>();
+            if (_spinButton == null) _spinButton = GetComponentInChildren<Button>(true);
+            if (_wheelRoot == null) _wheelRoot = GetComponentInChildren<RectTransform>(true);
+            if (_pointer == null) _pointer = GetComponentInChildren<Image>(true);
+            if (_autoFill == null) _autoFill = GetComponent<WheelZoneAutoFill>();
+            if (_exitButton == null) _exitButton = GameObject.Find("ui_button_exit")?.GetComponent<Button>();
         }
 #endif
 
         // --------------------------------------------------------------------
-        /// <summary>
-        /// External systems (GameManager, VFX) can subscribe to spin result here.
-        /// </summary>
-        public void SubscribeToSpinResult(Action<WheelSliceSO> callback)
-        {
-            OnSliceEvaluated += callback;
-        }
-
-        /// <summary>
-        /// Unsubscribe from spin result event.
-        /// </summary>
-        public void UnsubscribeFromSpinResult(Action<WheelSliceSO> callback)
-        {
-            OnSliceEvaluated -= callback;
-        }
-
+        // PUBLIC API
         // --------------------------------------------------------------------
-        /// <summary>
-        /// Applies wheel base + pointer visuals based on active theme.
-        /// </summary>
+
+        public void SubscribeToSpinResult(Action<WheelSliceSO> callback) => OnSliceEvaluated += callback;
+        public void UnsubscribeFromSpinResult(Action<WheelSliceSO> callback) => OnSliceEvaluated -= callback;
+
         public void ApplyTheme(WheelThemeSO theme)
         {
-            if (theme == null)
-                return;
+            if (theme == null) return;
 
             if (_wheelBaseImage != null && theme.WheelBase != null)
                 _wheelBaseImage.sprite = theme.WheelBase;
@@ -124,102 +108,128 @@ namespace VertigoGames.Wheel.UI
             if (_pointer != null && theme.PointerSprite != null)
                 _pointer.sprite = theme.PointerSprite;
 
-            // Camera background color transition
+            // Camera background logic (Specific to scene, acceptable to keep here)
             Camera cam = Camera.main;
             if (cam != null)
             {
-                cam.DOColor(theme.BackgroundColor, 0.4f)
-                   .SetEase(Ease.OutQuad);
+                cam.DOColor(theme.BackgroundColor, 0.4f).SetEase(Ease.OutQuad);
             }
         }
 
-        /// <summary>
-        /// Smooth reset of wheel rotation. Called after spin or zone change.
-        /// </summary>
         public void ResetWheelRotation(float duration = 0.35f)
         {
+            _wheelRoot.DORotate(Vector3.zero, duration).SetEase(Ease.OutCubic);
+        }
+
+        // --------------------------------------------------------------------
+        // CORE LOGIC
+        // --------------------------------------------------------------------
+
+        private void Spin()
+        {
+            if (!_spinButton.interactable) return;
+
+            // Lock UI & Feedback
+            _spinButton.interactable = false;
+            if (_exitButton != null) _exitButton.interactable = false;
+
+            OnSpinStarted?.Invoke();
+
+            // CLEAN EXTENSION CALL:
+            _spinButton.transform.DOPress();
+
+            // Calculate Math
+            float sliceAngle = 360f / SliceCount;
+            int targetSliceIndex = UnityEngine.Random.Range(0, SliceCount);
+            float targetAngle = targetSliceIndex * sliceAngle;
+            float extraTurns = UnityEngine.Random.Range(_extraTurnRange.x, _extraTurnRange.y);
+            float totalAngle = extraTurns * 360f + targetAngle;
+
+            // Spin Animation
             _wheelRoot
-                .DORotate(Vector3.zero, duration)
-                .SetEase(Ease.OutCubic);
+                .DORotate(new Vector3(0, 0, -totalAngle), _wheelSpinTime, RotateMode.FastBeyond360)
+                .SetEase(_spinEase)
+                .OnUpdate(UpdatePointerKick)
+                .OnComplete(OnSpinComplete);
         }
 
-        // --------------------------------------------------------------------
-        /// <summary>
-        /// Ensures required UI elements are assigned.
-        /// </summary>
-        private bool ValidateRefs()
+        private void OnSpinComplete()
         {
-            if (_spinButton == null)
-            {
-                Debug.LogError("WheelController: Spin button missing!");
-                return false;
-            }
+            OnSpinFinished?.Invoke();
+            _lastSliceIndex = -1f;
 
-            if (_wheelRoot == null)
-            {
-                Debug.LogError("WheelController: Wheel root missing!");
-                return false;
-            }
+            // Release UI Logic
+            DOVirtual.DelayedCall(0.2f, () => { _spinButton.interactable = true; });
+            if (_exitButton != null) _exitButton.interactable = true;
 
-            if (_pointer == null)
-            {
-                Debug.LogError("WheelController: Pointer missing!");
-                return false;
-            }
+            // Reset Visuals
+            _pointer.transform.DOKill();
+            _pointer.transform.localEulerAngles = _pointerDefaultRotation;
 
-            return true;
+            // CLEAN EXTENSION CALL:
+            _spinButton.transform.DOResetScale();
+
+            // Math: Determine Winning Slice
+            float sliceAngle = 360f / SliceCount;
+            float wheelZ = _wheelRoot.localEulerAngles.z;
+            float normalized = Mathf.Repeat(-wheelZ + _pointerAngleOffset, 360f);
+            int index = Mathf.FloorToInt((normalized + sliceAngle * 0.5f) / sliceAngle) % SliceCount;
+
+            WheelSliceSO slice = _currentZone.Slices[index];
+
+            Debug.Log($"SPIN RESULT → {slice.SliceName} (index: {index})");
+            OnSliceEvaluated?.Invoke(slice);
         }
 
-        // --------------------------------------------------------------------
-        /// <summary>
-        /// Updates UI slice icons based on the active zone's slice data.
-        /// </summary>
-        private void ApplyZoneData()
+        public void SetZone(WheelZoneSO zone)
         {
-            var layout = WheelGameManager.Instance.IconLayout;
-            var zone = _currentZone;
+            if (zone == null) return;
 
-            for (int i = 0; i < zone.Slices.Count; i++)
-            {
-                var slot = layout.GetSlot(i);
-                if (slot.childCount == 0)
+            _currentZone = zone;
+
+            // Data setup
+            _autoFill.FillZone(_currentZone);
+            _currentZone.ShuffleSlices();
+
+            // Instant Reset
+            _wheelRoot.localEulerAngles = Vector3.zero;
+
+            // CLEAN EXTENSION CALLS:
+            _wheelRoot.transform.DOPop(); // Wheel pops in
+
+            _pointer.transform.DOKill(complete: true);
+
+            _pointer.transform.localEulerAngles = _pointerDefaultRotation;
+
+            _pointer.transform
+                .DOPunchRotation(new Vector3(0, 0, 15f), 0.25f, 20, 1)
+                .OnComplete(() =>
                 {
-                    Debug.LogError("Slot missing child icon at index " + i);
-                    continue;
-                }
+                    _pointer.transform.localEulerAngles = _pointerDefaultRotation;
+                });
 
-                var icon = slot.GetChild(0).GetComponent<Image>();
-                icon.sprite = zone.Slices[i].Icon;
-
-                // 🔥 SCALE LOGIC
-                if (zone.Slices[i].IsBomb)
-                    icon.rectTransform.localScale = new Vector3(1.5f, 1.5f, 1);
-                else
-                    icon.rectTransform.localScale = Vector3.one; // normal slice
-            }
+            ApplyZoneData();
         }
 
-        // --------------------------------------------------------------
-        // MINIMAL POINTER KICK (A-LEVEL)
-        // --------------------------------------------------------------
+        // --------------------------------------------------------------------
+        // PRIVATE HELPERS
+        // --------------------------------------------------------------------
+
         private void PlayPointerKick()
         {
-            if (_pointer == null)
-                return;
+            if (_pointer == null) return;
 
+            // Physics-based kick logic (Domain specific, keep it here)
             float kick = 4f;
-
             float targetZ = _pointerDefaultRotation.z + UnityEngine.Random.Range(-kick, kick);
 
             _pointer.transform.DOKill();
-
             _pointer.transform
                 .DOLocalRotate(new Vector3(0, 0, targetZ), 0.08f)
                 .SetEase(Ease.OutQuad)
                 .OnComplete(() =>
                 {
-
-            _pointer.transform
+                    _pointer.transform
                         .DOLocalRotate(_pointerDefaultRotation, 0.1f)
                         .SetEase(Ease.OutQuad);
                 });
@@ -228,7 +238,6 @@ namespace VertigoGames.Wheel.UI
         private void UpdatePointerKick()
         {
             float z = Mathf.Repeat(_wheelRoot.localEulerAngles.z, 360f);
-
             int sliceIndex = Mathf.FloorToInt(z / _sliceAngleSize);
 
             if (sliceIndex != _lastSliceIndex)
@@ -238,119 +247,35 @@ namespace VertigoGames.Wheel.UI
             }
         }
 
-        // --------------------------------------------------------------------
-        /// <summary>
-        /// Called when the user presses the Spin button.
-        /// Calculates final rotation and animates the wheel.
-        /// </summary>
-        private void Spin()
+        private void ApplyZoneData()
         {
-            if (!_spinButton.interactable)
-                return;
+            var layout = WheelGameManager.Instance.IconLayout;
+            var zone = _currentZone;
 
-            // Lock button + press animation
-            _spinButton.interactable = false;
-            OnSpinStarted?.Invoke();
-            _spinButton.transform.DOScale(0.9f, 0.15f);
-
-            if (_exitButton != null)
-                _exitButton.interactable = false;
-
-            float sliceAngle = 360f / SliceCount;
-
-            // Select random slice
-            int targetSliceIndex = UnityEngine.Random.Range(0, SliceCount);
-            float targetAngle = targetSliceIndex * sliceAngle;
-
-            // Add extra full rotations
-            float extraTurns = UnityEngine.Random.Range(_extraTurnRange.x, _extraTurnRange.y);
-            float totalAngle = extraTurns * 360f + targetAngle;
-
-            _wheelRoot
-                .DORotate(new Vector3(0, 0, -totalAngle), _wheelSpinTime, RotateMode.FastBeyond360)
-                .SetEase(_spinEase)
-                .OnUpdate(UpdatePointerKick)
-                .OnComplete(OnSpinComplete);
-        }
-
-        // --------------------------------------------------------------------
-        /// <summary>
-        /// Called automatically when wheel rotation animation ends.
-        /// Determines the winning slice and triggers VFX + GameManager events.
-        /// </summary>
-        private void OnSpinComplete()
-        {
-            OnSpinFinished?.Invoke();
-            _lastSliceIndex = -1f;
-            // Delay enable for better UX feeling
-            DOVirtual.DelayedCall(0.2f, () =>
+            for (int i = 0; i < zone.Slices.Count; i++)
             {
-                _spinButton.interactable = true;
-            });
+                var slot = layout.GetSlot(i);
+                if (slot.childCount == 0) continue;
 
-            if (_exitButton != null)
-                _exitButton.interactable = true;
+                var icon = slot.GetChild(0).GetComponent<Image>();
+                icon.sprite = zone.Slices[i].Icon;
 
-            _pointer.transform.DOKill();
-            _pointer.transform.localEulerAngles = _pointerDefaultRotation;
-
-            // Release button scale
-            _spinButton.transform.DOScale(1f, 0.15f);
-
-            float sliceAngle = 360f / SliceCount;
-            float wheelZ = _wheelRoot.localEulerAngles.z;
-
-            // Normalize wheel rotation relative to pointer orientation
-            float normalized = Mathf.Repeat(-wheelZ + _pointerAngleOffset, 360f);
-
-            // Find nearest slice
-            int index = Mathf.FloorToInt((normalized + sliceAngle * 0.5f) / sliceAngle) % SliceCount;
-
-            WheelSliceSO slice = _currentZone.Slices[index];
-
-            Debug.Log($"SPIN RESULT → {slice.SliceName} (index: {index})");
-
-            OnSliceEvaluated?.Invoke(slice);
+                // Scale Logic
+                if (zone.Slices[i].IsBomb)
+                    icon.rectTransform.localScale = new Vector3(1.5f, 1.5f, 1);
+                else
+                    icon.rectTransform.localScale = Vector3.one;
+            }
         }
 
-        // --------------------------------------------------------------------
-        /// <summary>
-        /// Changes active zone, shuffles slices, resets wheel,
-        /// and plays enter animations.
-        /// </summary>
-        public void SetZone(WheelZoneSO zone)
+        private bool ValidateRefs()
         {
-            if (zone == null)
-                return;
-
-            _currentZone = zone;
-
-            // Runtime fill + shuffle
-            _autoFill.FillZone(_currentZone);
-            _currentZone.ShuffleSlices();
-
-            // Reset wheel instantly
-            _wheelRoot.localEulerAngles = Vector3.zero;
-
-            // Wheel pop animation
-            _wheelRoot.localScale = Vector3.one * 0.9f;
-            _wheelRoot
-                .DOScale(1f, 0.25f)
-                .SetEase(Ease.OutBack);
-
-            // Pointer shake
-            _pointer.transform
-                .DOShakeRotation(
-                    duration: 0.25f,
-                    strength: 10f,
-                    vibrato: 18,
-                    randomness: 90f,
-                    fadeOut: true
-                )
-                .SetEase(Ease.OutQuad);
-
-            // Update icon sprites
-            ApplyZoneData();
+            if (_spinButton == null || _wheelRoot == null || _pointer == null)
+            {
+                Debug.LogError("WheelController: Missing critical references!");
+                return false;
+            }
+            return true;
         }
     }
 }

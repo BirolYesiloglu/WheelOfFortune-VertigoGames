@@ -266,7 +266,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _scoreText: {fileID: 1714704258}
-  _vfx: {fileID: 414082800}
 --- !u!114 &19317515
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -576,7 +575,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _scoreText: {fileID: 238309345}
-  _vfx: {fileID: 414082800}
 --- !u!114 &148592855
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4664,7 +4662,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _zoneLabel: {fileID: 1714704258}
-  _vfx: {fileID: 414082800}
 --- !u!1 &2044451491
 GameObject:
   m_ObjectHideFlags: 0
