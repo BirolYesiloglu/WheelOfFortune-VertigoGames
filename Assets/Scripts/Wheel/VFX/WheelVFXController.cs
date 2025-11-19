@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using DG.Tweening;
 using VertigoGames.Wheel.Data;
 using VertigoGames.Wheel.Systems;
+using TMPro;
 
 namespace VertigoGames.Wheel.VFX
 {
@@ -44,7 +45,6 @@ namespace VertigoGames.Wheel.VFX
                 _starGlowAlpha = GameObject.Find("ui_star_glow_alpha")?.GetComponent<Image>();
         }
 #endif
-
         public void PlayWheelGlowIdle()
         {
             if (_starGlowAlpha == null)
@@ -55,13 +55,11 @@ namespace VertigoGames.Wheel.VFX
             Color c = _starGlowAlpha.color;
             _starGlowAlpha.color = new Color(c.r, c.g, c.b, 0.25f);
 
-            // Sonsuz nefes alma animasyonu
             _starGlowAlpha
                 .DOFade(0.45f, 1.6f)
                 .SetEase(Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo);
         }
-
 
         public void PlaySilverTransition()
         {
@@ -108,7 +106,6 @@ namespace VertigoGames.Wheel.VFX
                 _starGlowAlpha.gameObject.SetActive(false);
             });
         }
-
 
         public void PlayGoldTransition()
         {

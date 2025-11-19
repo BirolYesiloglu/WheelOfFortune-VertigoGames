@@ -22,7 +22,7 @@ namespace VertigoGames.Wheel.UI
         private void OnValidate()
         {
             if (_scoreText == null)
-                _scoreText = GetComponentInChildren<TMPro.TMP_Text>(true);
+                _scoreText = GameObject.Find("ui_score_value")?.GetComponent<TMP_Text>();
         }
 #endif
 
@@ -37,18 +37,7 @@ namespace VertigoGames.Wheel.UI
             _scoreText.text = newScore.ToString();
 
             // POP ANIMATION
-            _scoreText.transform.DOKill();
-            _scoreText.transform.localScale = Vector3.one;
-
-            _scoreText.transform
-                .DOScale(1.25f, 0.15f)
-                .SetEase(Ease.OutQuad)
-                .OnComplete(() =>
-                {
-                    _scoreText.transform
-                        .DOScale(1f, 0.15f)
-                        .SetEase(Ease.OutBack);
-                });
+            _scoreText.transform.DOPop();
         }
     }
 }

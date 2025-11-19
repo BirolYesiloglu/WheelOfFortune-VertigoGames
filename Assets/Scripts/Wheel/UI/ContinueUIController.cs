@@ -34,7 +34,9 @@ namespace VertigoGames.Wheel.UI
                 _goldIcon = transform.Find("ui_gold_icon")?.GetComponent<Image>();
         }
 #endif
-
+        /// <summary>
+        /// Opens the continue UI panel.
+        /// </summary>
         public void Show(int price, Action onYes, Action onNo)
         {
             _panel.SetActive(true);
