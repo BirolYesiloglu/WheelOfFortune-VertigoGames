@@ -35,6 +35,8 @@ namespace VertigoGames.Wheel.Systems
 
         private int _currentZoneIndex = 0;
         public int GetCurrentZoneIndex => _currentZoneIndex;
+        private int _currentLevelNumber = 1;
+        public int CurrentLevelNumber => _currentLevelNumber; // To hide loop
 
         public event System.Action OnZoneLoaded;
 
@@ -161,6 +163,7 @@ namespace VertigoGames.Wheel.Systems
         public void GoToZone1()
         {
             _currentZoneIndex = 0;
+            _currentLevelNumber = 1;
             LoadZone(0);
         }
 
@@ -245,6 +248,7 @@ namespace VertigoGames.Wheel.Systems
 
                 // Progress zone index
                 _currentZoneIndex++;
+                _currentLevelNumber++;
 
                 if (_currentZoneIndex >= _zones.Length)
                 {

@@ -31,7 +31,7 @@ namespace VertigoGames.Wheel.UI
 
         private void UpdateZoneLabel()
         {
-            int zone = WheelGameManager.Instance.GetCurrentZoneIndex + 1;
+            int zone = WheelGameManager.Instance.CurrentLevelNumber;
 
             _zoneLabel.text = $"{zone}";
 
