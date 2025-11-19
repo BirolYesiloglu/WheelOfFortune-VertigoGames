@@ -34,6 +34,7 @@ namespace VertigoGames.Wheel.Systems
         public void ResumeZoneLoad() => _isPaused = false;
 
         private int _currentZoneIndex = 0;
+        public int GetCurrentZoneIndex => _currentZoneIndex;
 
         public event System.Action OnZoneLoaded;
 
@@ -129,7 +130,6 @@ namespace VertigoGames.Wheel.Systems
             WheelThemeSO theme = GetThemeForZone(index);
 
             _wheelController.ApplyTheme(theme);
-
 
             // Zone VFX
             if (theme == _goldTheme)

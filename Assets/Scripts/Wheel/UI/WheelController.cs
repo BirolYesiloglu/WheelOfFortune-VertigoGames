@@ -42,6 +42,9 @@ namespace VertigoGames.Wheel.UI
         public event Action OnSpinFinished;
 
         private const int SliceCount = 8;
+        private float _lastSliceIndex = -1f;
+        private float _sliceAngleSize = 360f / SliceCount;
+        private Vector3 _pointerDefaultRotation;
 
         // --------------------------------------------------------------------
 
@@ -55,6 +58,8 @@ namespace VertigoGames.Wheel.UI
                 Debug.LogError("WheelController: AutoFill reference missing!");
                 return;
             }
+
+            _pointerDefaultRotation = _pointer.transform.localEulerAngles;
 
             DOTween.Init(recycleAllByDefault: true);
 
@@ -194,6 +199,45 @@ namespace VertigoGames.Wheel.UI
             }
         }
 
+        // --------------------------------------------------------------
+        // MINIMAL POINTER KICK (A-LEVEL)
+        // --------------------------------------------------------------
+        private void PlayPointerKick()
+        {
+            if (_pointer == null)
+                return;
+
+            float kick = 4f;
+
+            float targetZ = _pointerDefaultRotation.z + UnityEngine.Random.Range(-kick, kick);
+
+            _pointer.transform.DOKill();
+
+            _pointer.transform
+                .DOLocalRotate(new Vector3(0, 0, targetZ), 0.08f)
+                .SetEase(Ease.OutQuad)
+                .OnComplete(() =>
+                {
+
+            _pointer.transform
+                        .DOLocalRotate(_pointerDefaultRotation, 0.1f)
+                        .SetEase(Ease.OutQuad);
+                });
+        }
+
+        private void UpdatePointerKick()
+        {
+            float z = Mathf.Repeat(_wheelRoot.localEulerAngles.z, 360f);
+
+            int sliceIndex = Mathf.FloorToInt(z / _sliceAngleSize);
+
+            if (sliceIndex != _lastSliceIndex)
+            {
+                PlayPointerKick();
+                _lastSliceIndex = sliceIndex;
+            }
+        }
+
         // --------------------------------------------------------------------
         /// <summary>
         /// Called when the user presses the Spin button.
@@ -225,6 +269,7 @@ namespace VertigoGames.Wheel.UI
             _wheelRoot
                 .DORotate(new Vector3(0, 0, -totalAngle), _wheelSpinTime, RotateMode.FastBeyond360)
                 .SetEase(_spinEase)
+                .OnUpdate(UpdatePointerKick)
                 .OnComplete(OnSpinComplete);
         }
 
@@ -236,6 +281,7 @@ namespace VertigoGames.Wheel.UI
         private void OnSpinComplete()
         {
             OnSpinFinished?.Invoke();
+            _lastSliceIndex = -1f;
             // Delay enable for better UX feeling
             DOVirtual.DelayedCall(0.2f, () =>
             {
@@ -244,6 +290,9 @@ namespace VertigoGames.Wheel.UI
 
             if (_exitButton != null)
                 _exitButton.interactable = true;
+
+            _pointer.transform.DOKill();
+            _pointer.transform.localEulerAngles = _pointerDefaultRotation;
 
             // Release button scale
             _spinButton.transform.DOScale(1f, 0.15f);
