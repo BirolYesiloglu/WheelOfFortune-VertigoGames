@@ -36,13 +36,14 @@ namespace VertigoGames.Wheel.Data
 
         public void AddSlice(WheelSliceSO slice)
         {
-            if (slice != null)
+            if (slice != null && !_slices.Contains(slice))
                 _slices.Add(slice);
         }
 
         public void AddSlices(IEnumerable<WheelSliceSO> slices)
         {
-            _slices.AddRange(slices);
+            foreach (var s in slices)
+                AddSlice(s);
         }
 
         public void ShuffleSlices()

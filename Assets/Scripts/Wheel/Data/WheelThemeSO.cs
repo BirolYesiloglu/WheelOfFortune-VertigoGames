@@ -7,8 +7,10 @@ namespace VertigoGames.Wheel.Data
     {
         [SerializeField] private Sprite _wheelBase;
         [SerializeField] private Sprite _pointerSprite;
+        [SerializeField] private Color _backgroundColor;
 
         public Sprite WheelBase => _wheelBase;
         public Sprite PointerSprite => _pointerSprite;
+        public Color BackgroundColor => _backgroundColor;
     }
 }
