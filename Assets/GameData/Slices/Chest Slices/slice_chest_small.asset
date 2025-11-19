@@ -15,7 +15,7 @@ MonoBehaviour:
   _sliceName: Small Chest
   _icon: {fileID: 21300000, guid: 8454682d9e42ac444b816757a2fd7b41, type: 3}
   _rewardType: 2
-  _rewardValue: 1
+  _rewardValue: 10
   _isBomb: 0
   _isSpecial: 0
   _description: Entry-level chest. Low payout.

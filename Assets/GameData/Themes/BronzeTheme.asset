@@ -14,3 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _wheelBase: {fileID: 21300000, guid: 8558301ecf2ca5b4296c655e73e08431, type: 3}
   _pointerSprite: {fileID: 21300000, guid: b9fd96cefd961c74cae275f9877c6646, type: 3}
+  _backgroundColor: {r: 0.67058825, g: 0.39215687, b: 0.13333334, a: 0}

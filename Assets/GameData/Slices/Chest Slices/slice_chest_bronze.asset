@@ -15,7 +15,7 @@ MonoBehaviour:
   _sliceName: Bronze Chest
   _icon: {fileID: 21300000, guid: 3bde80c1f4e4c7a429c2d9d2f974e476, type: 3}
   _rewardType: 2
-  _rewardValue: 1
+  _rewardValue: 10
   _isBomb: 0
   _isSpecial: 0
   _description: Low-tier chest. Basic loot.

@@ -15,7 +15,7 @@ MonoBehaviour:
   _sliceName: Silver Chest
   _icon: {fileID: 21300000, guid: 48588bd71f1e19a40b083f33af4fba9e, type: 3}
   _rewardType: 2
-  _rewardValue: 2
+  _rewardValue: 20
   _isBomb: 0
   _isSpecial: 0
   _description: Mid-tier chest reward.

@@ -17,5 +17,5 @@ MonoBehaviour:
   _rewardType: 1
   _rewardValue: 25
   _isBomb: 0
-  _isSpecial: 0
+  _isSpecial: 1
   _description: High burst-damage shotgun bonus. Strong value slice.
