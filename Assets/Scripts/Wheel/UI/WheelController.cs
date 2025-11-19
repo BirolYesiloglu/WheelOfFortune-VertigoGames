@@ -19,12 +19,15 @@ namespace VertigoGames.Wheel.UI
         [Header("Wheel Data")]
         [SerializeField] private WheelZoneSO _currentZone;
 
+        [Header("References")]
+        [SerializeField] private WheelZoneAutoFill _autoFill;
+
         [Header("UI References")]
         [SerializeField] private RectTransform _wheelRoot;
-        [SerializeField] private Image[] _sliceIcons;
         [SerializeField] private Image _pointer;
         [SerializeField] private Image _wheelBaseImage;
         [SerializeField] private Button _spinButton;
+        [SerializeField] private Button _exitButton;
 
         [Header("Spin Settings")]
         [SerializeField] private float _wheelSpinTime = 3f;
@@ -35,6 +38,9 @@ namespace VertigoGames.Wheel.UI
         [Tooltip("Pointer direction in degrees. Defines slice index 0 relative to wheel.")]
         [SerializeField] private float _pointerAngleOffset = 0f;
 
+        public event Action OnSpinStarted;
+        public event Action OnSpinFinished;
+
         private const int SliceCount = 8;
 
         // --------------------------------------------------------------------
@@ -44,6 +50,12 @@ namespace VertigoGames.Wheel.UI
             if (!ValidateRefs())
                 return;
 
+            if (_autoFill == null)
+            {
+                Debug.LogError("WheelController: AutoFill reference missing!");
+                return;
+            }
+
             DOTween.Init(recycleAllByDefault: true);
 
             // Assign spin button event
@@ -51,9 +63,29 @@ namespace VertigoGames.Wheel.UI
             _spinButton.onClick.AddListener(Spin);
 
             // Auto fill slice data at runtime
-            WheelZoneAutoFill.FillZone(_currentZone);
+            _autoFill.FillZone(_currentZone);
             ApplyZoneData();
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (_spinButton == null)
+                _spinButton = GetComponentInChildren<Button>(true);
+
+            if (_wheelRoot == null)
+                _wheelRoot = GetComponentInChildren<RectTransform>(true);
+
+            if (_pointer == null)
+                _pointer = GetComponentInChildren<Image>(true);
+
+            if (_autoFill == null)
+                _autoFill = GetComponent<WheelZoneAutoFill>();
+
+            if (_exitButton == null)
+                _exitButton = GameObject.Find("ui_button_exit")?.GetComponent<Button>();
+        }
+#endif
 
         // --------------------------------------------------------------------
         /// <summary>
@@ -81,13 +113,19 @@ namespace VertigoGames.Wheel.UI
             if (theme == null)
                 return;
 
-            // Apply wheel base appearance
             if (_wheelBaseImage != null && theme.WheelBase != null)
                 _wheelBaseImage.sprite = theme.WheelBase;
 
-            // Apply pointer appearance
             if (_pointer != null && theme.PointerSprite != null)
                 _pointer.sprite = theme.PointerSprite;
+
+            // Camera background color transition
+            Camera cam = Camera.main;
+            if (cam != null)
+            {
+                cam.DOColor(theme.BackgroundColor, 0.4f)
+                   .SetEase(Ease.OutQuad);
+            }
         }
 
         /// <summary>
@@ -133,29 +171,26 @@ namespace VertigoGames.Wheel.UI
         /// </summary>
         private void ApplyZoneData()
         {
-            if (_currentZone == null)
-            {
-                Debug.LogError("WheelController: No zone assigned!");
-                return;
-            }
+            var layout = WheelGameManager.Instance.IconLayout;
+            var zone = _currentZone;
 
-            if (_sliceIcons.Length != SliceCount)
+            for (int i = 0; i < zone.Slices.Count; i++)
             {
-                Debug.LogError($"WheelController: SliceIcons must be {SliceCount}!");
-                return;
-            }
+                var slot = layout.GetSlot(i);
+                if (slot.childCount == 0)
+                {
+                    Debug.LogError("Slot missing child icon at index " + i);
+                    continue;
+                }
 
-            if (_currentZone.Slices.Count != SliceCount)
-            {
-                Debug.LogError($"WheelController: Zone slice count invalid! Expected {SliceCount}.");
-                return;
-            }
+                var icon = slot.GetChild(0).GetComponent<Image>();
+                icon.sprite = zone.Slices[i].Icon;
 
-            for (int i = 0; i < SliceCount; i++)
-            {
-                WheelSliceSO slice = _currentZone.Slices[i];
-                _sliceIcons[i].sprite = slice.Icon;
-                _sliceIcons[i].preserveAspect = true;
+                // 🔥 SCALE LOGIC
+                if (zone.Slices[i].IsBomb)
+                    icon.rectTransform.localScale = new Vector3(1.5f, 1.5f, 1);
+                else
+                    icon.rectTransform.localScale = Vector3.one; // normal slice
             }
         }
 
@@ -171,7 +206,11 @@ namespace VertigoGames.Wheel.UI
 
             // Lock button + press animation
             _spinButton.interactable = false;
+            OnSpinStarted?.Invoke();
             _spinButton.transform.DOScale(0.9f, 0.15f);
+
+            if (_exitButton != null)
+                _exitButton.interactable = false;
 
             float sliceAngle = 360f / SliceCount;
 
@@ -196,15 +235,18 @@ namespace VertigoGames.Wheel.UI
         /// </summary>
         private void OnSpinComplete()
         {
+            OnSpinFinished?.Invoke();
             // Delay enable for better UX feeling
             DOVirtual.DelayedCall(0.2f, () =>
             {
                 _spinButton.interactable = true;
             });
 
+            if (_exitButton != null)
+                _exitButton.interactable = true;
+
             // Release button scale
             _spinButton.transform.DOScale(1f, 0.15f);
-
 
             float sliceAngle = 360f / SliceCount;
             float wheelZ = _wheelRoot.localEulerAngles.z;
@@ -235,7 +277,7 @@ namespace VertigoGames.Wheel.UI
             _currentZone = zone;
 
             // Runtime fill + shuffle
-            WheelZoneAutoFill.FillZone(_currentZone);
+            _autoFill.FillZone(_currentZone);
             _currentZone.ShuffleSlices();
 
             // Reset wheel instantly
